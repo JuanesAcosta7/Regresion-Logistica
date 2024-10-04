@@ -1,0 +1,60 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import confusion_matrix, accuracy_score, classification_report
+from sklearn.compose import ColumnTransformer
+
+data = pd.read_csv('retail_sales (1).csv') #cargamos los datos
+#Exploramos los datos
+print(data.head())
+
+print(data.info())
+
+print(data.describe())
+
+#separamos las variables dependientes de las independientes
+x=data.drop('CustomerSatisfaction',axis=1)
+y = data['CustomerSatisfaction'].apply(lambda x: 1 if x >= 5 else 0) #creamos un umbral para determinar si la satisfaccion es alta o baja
+
+#Creamos dos conjuntos de datos, unos de entrenamiento y otros de prueba
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+
+#usamos un columntransform para estandarizar los datos
+ct = ColumnTransformer(
+    [('scaler', StandardScaler(), ['StoreID', 'ItemsSold']),
+     ('encoder', OneHotEncoder(), ['Location'])],
+    remainder='passthrough'
+)
+
+
+x_train_scaled = ct.fit_transform(x_train)
+x_test_scaled = ct.transform(x_test)
+
+#creamos el modelo
+logistic_model = LogisticRegression()
+
+#entrenamos el modelo
+logistic_model.fit(x_train_scaled, y_train)
+
+#hacemos la predicción con el conjunto de prueba
+y_pred = logistic_model.predict(x_test_scaled)
+
+#Creamos la matriz
+conf_matrix = confusion_matrix(y_test, y_pred)
+
+#ajustamos la matriz para visualizarla
+plt.figure(figsize=(8, 6))
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Reds', cbar = False)
+plt.title('Confusion Matrix')
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.show()
+
+print(classification_report(y_test, y_pred))
+
+accuracy = accuracy_score(y_test, y_pred)
+print(f'Exactitud del modelo: {accuracy * 100:.2f}%')
